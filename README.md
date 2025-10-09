@@ -1,1 +1,1 @@
-# AE-GRA
+This is the code implementation for the paper “Boosting Black-Box Graph Reconstruction Attacks with Aligned Node Embeddings,” which proposes the AE-GRA black-box graph reconstruction attack framework. Based on an aligned embedding strategy, this method effectively reconstructs private links within training data.

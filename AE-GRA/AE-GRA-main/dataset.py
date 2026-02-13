@@ -70,9 +70,9 @@ class Dataset():
     def get_train_val_test(self):
         """Get training, validation, test splits according to self.setting (either 'nettack' or 'gcn').
         """
-        if self.setting == 'nettack':#测试集占比大
+        if self.setting == 'nettack':
             return get_train_val_test(nnodes=self.adj.shape[0], val_size=0.1, test_size=0.8, stratify=self.labels, seed=self.seed)
-        if self.setting == 'gcn':#划分更均匀
+        if self.setting == 'gcn':
             # return get_train_val_test_gcn(self.labels, seed=self.seed)
             # return get_train_val_test_gcn_more_train_node(self.labels, seed=self.seed)
             return get_train_val_test_gcn_80_train_node(self.labels, seed=self.seed)
@@ -107,10 +107,10 @@ class Dataset():
         if self.name == 'blogcatalog':
             return self.load_blog()
 
-        if not osp.exists(self.data_filename):#数据文件不存在，我才去下载，如果存在了，我就直接加载
+        if not osp.exists(self.data_filename):
             self.download_npz()
 
-        adj, features, labels = self.get_adj()#比较特殊的数据集的加载都列到前面了，有.npz后缀的文件加载统一在这里实现
+        adj, features, labels = self.get_adj()
         return adj, features, labels
 
     def download_npz(self):
@@ -155,7 +155,7 @@ class Dataset():
 
         ### === Step 2: Load features and labels ===
         features = sp.lil_matrix((num_nodes, 932), dtype=np.float32)
-        labels = np.full((num_nodes,), -1, dtype=np.int64)  # 初始化为-1表示无标签
+        labels = np.full((num_nodes,), -1, dtype=np.int64)
 
         with open(feat_label_path, 'r') as f:
             next(f)  # skip header
@@ -434,7 +434,7 @@ class Dataset():
     def init_matrix(self, adj):
         n = adj.shape[0]
         result = np.zeros((n, n))
-        return sp.csr_matrix(result)#将全零的result数组转换为一个压缩稀疏行（CSR）矩阵，只存储非0元素
+        return sp.csr_matrix(result)
 
 
 def parse_index_file(filename):

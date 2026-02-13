@@ -23,9 +23,9 @@ def test(adj, features, labels, victim_model):
     return output.detach()
 
 def dot_product_decode(Z):
-    Z = F.normalize(Z, p=2, dim=1)#Z 的每一行归一化到单位范数（即每行的L2范数为1）
-    Z = torch.matmul(Z, Z.t())#计算了 Z 和 Z 的转置 Z.t() 的点积（矩阵乘法）。结果的元素表示原始 Z 矩阵中每对节点之间的相似度。
-    adj = torch.relu(Z-torch.eye(Z.shape[0]))#减去单位矩阵，只保留非对角线上的值，ReLU激活函数确保输出的值是非负的，保留非负的相似度值，并将负值设为0
+    Z = F.normalize(Z, p=2, dim=1)
+    Z = torch.matmul(Z, Z.t())
+    adj = torch.relu(Z-torch.eye(Z.shape[0]))
     return adj
 
 def preprocess_Adj(adj, feature_adj):
@@ -53,16 +53,10 @@ def transfer_state_dict(pretrained_dict, model_dict):
 
 #adj.numpy(), inference_adj.numpy(), idx_attack
 def metric(ori_adj, inference_adj, idx):
-    #提取邻接图中所要攻击节点的邻接信息，并将其转换为一维向量
     real_edge = ori_adj[idx, :][:, idx].reshape(-1)
     pred_edge = inference_adj[idx, :][:, idx].reshape(-1)
-
-    # AP：average precision  AUC：area under the ROC curve
-    #fpr：不同阈值下的假阳性率 tpr：不同阈值下的真阳性率  threshold：将预测概率转换为二分类结果的阈值，来源于预测值
     fpr, tpr, threshold = roc_curve(real_edge, pred_edge)
-    #找到所有 负样本（即不存在的边）在 real_edge 中的索引
     index = np.where(real_edge == 0)[0]
-    #随机选择一部分负样本（等于0）的索引，准备从 real_edge 中删除，使正负样本的数量相等
     index_delete = np.random.choice(index, size=int(len(real_edge)-2*np.sum(real_edge)), replace=False)
     real_edge = np.delete(real_edge, index_delete)
     pred_edge = np.delete(pred_edge, index_delete)
@@ -118,7 +112,6 @@ data = Dataset(root=' ', name=args.dataset, setting='GCN')
 
 adj, features, labels, init_adj = data.adj, data.features, data.labels, data.init_adj
 idx_train, idx_val, idx_test= data.idx_train, data.idx_val, data.idx_test
-# sys.exit("到此为止，程序终止")
 # print("adj")
 # print(adj)
 # print("features")
@@ -128,10 +121,10 @@ idx_train, idx_val, idx_test= data.idx_train, data.idx_val, data.idx_test
 
 adj, features, labels = preprocess(adj, features, labels, preprocess_adj=False, onehot_feature=False)
 
-feature_adj = dot_product_decode(features)#获得归一化相似度矩阵
+feature_adj = dot_product_decode(features)
 
 
-init_adj = torch.FloatTensor(init_adj.todense())#大小是节点数X节点数；将稀疏矩阵转换为密集矩阵，将密集矩阵转换为 PyTorch 张量
+init_adj = torch.FloatTensor(init_adj.todense())
 # initial adj is set to zero matrix
 
 # Setup Victim Model
@@ -143,6 +136,7 @@ victim_model.fit(features, adj, labels, idx_train, idx_val)
 best_model_params = torch.load(' ')
 victim_model.load_state_dict(best_model_params)
 test(adj, features, labels, victim_model)
+
 
 
 

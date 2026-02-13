@@ -150,7 +150,7 @@ def to_tensor(adj, features, labels=None, device='cpu'):
     else:
         # print("B")
 
-        adj = torch.FloatTensor(adj)#运行此行
+        adj = torch.FloatTensor(adj) 
     if sp.issparse(features):
         # print("C")
 
@@ -158,7 +158,7 @@ def to_tensor(adj, features, labels=None, device='cpu'):
     else:
         # print("D")
 
-        features = torch.FloatTensor(np.array(features))#运行此行
+        features = torch.FloatTensor(np.array(features)) 
 
     if labels is None:
         # print("E")
@@ -564,103 +564,82 @@ def get_train_val_test_gcn(labels, seed=None):
     if seed is not None:
         np.random.seed(seed)
 
-    idx = np.arange(len(labels))#是一个从 0 到 len(labels) - 1 的数组，用于表示样本的索引
-    nclass = labels.max() + 1#获得类别数
+    idx = np.arange(len(labels)) 
+    nclass = labels.max() + 1 
     idx_train = []
     idx_unlabeled = []
     for i in range(nclass):
-        labels_i = idx[labels==i]#筛选出当前类别 i 对应的样本索引
+        labels_i = idx[labels==i] 
         # class_counts = {f"Class {i}": (labels == i).sum() for i in range(nclass)}
         # print(class_counts)
-        labels_i = np.random.permutation(labels_i)#对当前类别的样本索引进行随机打乱
-        idx_train = np.hstack((idx_train, labels_i[: 20])).astype(int)#从打乱后的样本中选择前 20 个样本作为训练集
-        idx_unlabeled = np.hstack((idx_unlabeled, labels_i[20: ])).astype(int)#将剩余的样本加入到未标记数据集（验证集和测试集）中
+        labels_i = np.random.permutation(labels_i) 
+        idx_train = np.hstack((idx_train, labels_i[: 20])).astype(int) 
+        idx_unlabeled = np.hstack((idx_unlabeled, labels_i[20: ])).astype(int) 
 
-    print("训练集数量" + str(len(idx_train)))
-    idx_unlabeled = np.random.permutation(idx_unlabeled)  # 对未标记的数据（验证集和测试集）再次进行随机打乱
-    idx_val = idx_unlabeled[: 500]  # 选出前 500 个样本作为验证集
-    print("验证集数量" + str(len(idx_val)))
-    idx_test = idx_unlabeled[500: 1000]  # 选出接下来的 1000 个样本作为测试集
-    print("测试集数量" + str(len(idx_test)))
-    return idx_train, idx_val, idx_test #cora有2700多个节点
+    idx_unlabeled = np.random.permutation(idx_unlabeled)  
+    idx_val = idx_unlabeled[: 500] 
+    idx_test = idx_unlabeled[500: 1000]   
+    return idx_train, idx_val, idx_test  
 
-def get_train_val_test_gcn_80_train_node(labels, seed=None):#1895：270：270
+def get_train_val_test_gcn_80_train_node(labels, seed=None): 
     if seed is not None:
         np.random.seed(seed)
 
-    idx = np.arange(len(labels))  # 所有数据的索引
-    np.random.shuffle(idx)  # 打乱索引
+    idx = np.arange(len(labels))   
+    np.random.shuffle(idx) 
 
     num_samples = len(idx)
     num_train = int(0.8 * num_samples)
     num_val = int(0.1 * num_samples)
-    num_test = num_samples - num_train - num_val  # 剩下的作为测试集
+    num_test = num_samples - num_train - num_val   
 
     idx_train = idx[:num_train]
     idx_val = idx[num_train:num_train + num_val]
     idx_test = idx[num_train + num_val:]
+    return idx_train, idx_val, idx_test 
 
-    print(f"训练集数量: {len(idx_train)}")
-    print(f"验证集数量: {len(idx_val)}")
-    print(f"测试集数量: {len(idx_test)}")
-
-    return idx_train, idx_val, idx_test  # cora有2700多个节点
-
-def get_train_val_test_gcn_10_train_node(labels, seed=None):#1895：270：270
+def get_train_val_test_gcn_10_train_node(labels, seed=None): 
     if seed is not None:
         np.random.seed(seed)
 
-    idx = np.arange(len(labels))  # 所有数据的索引
-    np.random.shuffle(idx)  # 打乱索引
+    idx = np.arange(len(labels))  
+    np.random.shuffle(idx)   
 
     num_samples = len(idx)
     num_train = int(0.1 * num_samples)
     num_val = int(0.1 * num_samples)
-    num_test = num_samples - num_train - num_val  # 剩下的作为测试集
+    num_test = num_samples - num_train - num_val  
 
     idx_train = idx[:num_train]
     idx_val = idx[num_train:num_train + num_val]
     idx_test = idx[num_train + num_val:]
+    return idx_train, idx_val, idx_test 
 
-    print(f"训练集数量: {len(idx_train)}")
-    print(f"验证集数量: {len(idx_val)}")
-    print(f"测试集数量: {len(idx_test)}")
-
-    return idx_train, idx_val, idx_test  # cora有2700多个节点
-
-def get_train_val_test_gcn_more_train_node(labels, seed=None):#1895：270：270
+def get_train_val_test_gcn_more_train_node(labels, seed=None): 
     if seed is not None:
         np.random.seed(seed)
 
-    idx = np.arange(len(labels))  # 是一个从 0 到 len(labels) - 1 的数组，用于表示样本的索引
-    nclass = labels.max() + 1  # 获得类别数
+    idx = np.arange(len(labels)) 
+    nclass = labels.max() + 1   
     idx_train = []
     idx_unlabeled = []
-    for i in range(nclass):#train:1050,val:500,text:500
-        labels_i = idx[labels == i]  # 筛选出当前类别 i 对应的样本索引
-        ##查看每类数量
-        # class_counts = {f"Class {i}": (labels == i).sum() for i in range(nclass)}
-        # print(class_counts)
-        labels_i = np.random.permutation(labels_i)  # 对当前类别的样本索引进行随机打乱
-        idx_train = np.hstack((idx_train, labels_i[: 250])).astype(int)#300 #150 100
-        idx_unlabeled = np.hstack((idx_unlabeled, labels_i[250:])).astype(int)  # 将剩余的样本加入到未标记数据集（验证集和测试集）中
-        # idx_attack = np.hstack((idx_train, labels_i[: 80])).astype(int)
+    for i in range(nclass): 
+        labels_i = idx[labels == i]  #  
+        labels_i = np.random.permutation(labels_i)  
+        idx_train = np.hstack((idx_train, labels_i[: 250])).astype(int) 
+        idx_unlabeled = np.hstack((idx_unlabeled, labels_i[250:])).astype(int)   
 
-    print("训练集数量"+str(len(idx_train)))
-    idx_unlabeled = np.random.permutation(idx_unlabeled)  # 对未标记的数据（验证集和测试集）再次进行随机打乱
-    idx_val = idx_unlabeled[: 500]#270  500
-    print("验证集数量"+str(len(idx_val)))
+    idx_unlabeled = np.random.permutation(idx_unlabeled)  
+    idx_val = idx_unlabeled[: 500] 
     idx_test = idx_unlabeled[500: 1000]
-    print("测试集数量"+str(len(idx_test)))
-    return idx_train, idx_val, idx_test  # cora有2700多个节点
+    return idx_train, idx_val, idx_test  
 
 def get_train_val_test_gcn_different_distribution(labels, seed=None):
     if seed is not None:
         np.random.seed(seed)
 
-    idx = np.arange(len(labels))#是一个从 0 到 6 的数组，用于表示样本的索引
+    idx = np.arange(len(labels)) 
 
-    # 前三类用于训练集，后三类分别作为验证集和测试集
     train_classes = [0, 1, 2]
     val_test_classes = [3, 4, 5, 6]
 
@@ -668,13 +647,11 @@ def get_train_val_test_gcn_different_distribution(labels, seed=None):
     idx_val = []
     idx_test = []
 
-    # 选择训练集，类别为前3类
     for i in train_classes:
         labels_i = idx[labels == i]
         labels_i = np.random.permutation(labels_i)
         idx_train = np.hstack((idx_train, labels_i)).astype(int)
 
-    # 选择验证集和测试集，类别为后4类
     for i in val_test_classes:
         labels_i = idx[labels == i]
         labels_i = np.random.permutation(labels_i)

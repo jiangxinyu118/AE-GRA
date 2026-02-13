@@ -58,36 +58,30 @@ def create_edge_index_from_features(features, threshold):
     return torch.tensor(edge_index, dtype=torch.long).t().contiguous().to(device)
 
 def pubmed_create_edge_index_from_features2(features, threshold=0.5, block_size=500):#1000
-    """
-    分块计算余弦相似度，仅保留大于阈值的边。
-    """
+  
     num_nodes = features.size(0)
     device = features.device
     edge_list = []
 
-    # 归一化特征矩阵
     features = torch.nn.functional.normalize(features, p=2, dim=1)
 
     for start in range(0, num_nodes, block_size):
         torch.cuda.empty_cache()
         end = min(start + block_size, num_nodes)
 
-        # 计算分块与全体的相似度
-        sim_block = torch.mm(features[start:end], features.T)  # [block_size, num_nodes]
-        rows, cols = torch.where(sim_block >= threshold)  # 筛选出满足阈值的索引
-        rows += start  # 调整行索引
+        sim_block = torch.mm(features[start:end], features.T)   
+        rows, cols = torch.where(sim_block >= threshold)  
+        rows += start 
         edge_list.append(torch.stack([rows, cols], dim=0))
 
         print(f"处理块 {start}-{end} 完成，边数：{rows.size(0)}")
 
-    # 合并所有边索引
     edge_index = torch.cat(edge_list, dim=1)
     return edge_index.to(device)
 
 
 
 def main():
-    print("训练graphsage机制目标模型")
     parser = argparse.ArgumentParser()
     parser.add_argument('--dataset', type=str, default='usair',
                         choices=['cora', 'cora_ml', 'citeseer','enzyme', 'polblogs', 'pubmed', 'AIDS', 'usair', 'brazil'],
@@ -104,10 +98,8 @@ def main():
     labels = torch.LongTensor(labels).to(device)
     features = torch.FloatTensor(np.array(features.todense())).to(device)
     if sp.issparse(adj):
-        print("邻接矩阵是稀疏矩阵")
-        edge_index, _ = from_scipy_sparse_matrix(adj)  # 直接用 scipy.sparse 格式
+        edge_index, _ = from_scipy_sparse_matrix(adj)   
     else:
-        print("邻接矩阵是稠密矩阵")
         edge_index, _ = dense_to_sparse(torch.FloatTensor(adj))
 
 
@@ -117,7 +109,7 @@ def main():
 
     target_model = GraphSAGEtargetModel(num_features=features.shape[1], nclass=labels.max().item() + 1).to(device)
     optimizer = torch.optim.Adam(target_model.parameters(), lr=0.01)
-    patience = 10  # 如果验证集损失连续patience个epoch没有改善，则停止训练
+    patience = 10   
     best_acc_val = 0
     best_model_params = None
     early_stopping_counter = 0
@@ -141,20 +133,17 @@ def main():
                 val_loss = F.cross_entropy(val_output[idx_val], labels[idx_val])
                 val_accuracy = utils.accuracy(val_output[idx_val], labels[idx_val])
                 print(f'val_loss : {val_loss:.4f}, Validation Accuracy: {val_accuracy:.4f}')
-                # 如果验证集损失有改善，保存当前模型参数
                 if val_accuracy > best_acc_val:
                     best_acc_val = val_accuracy
                     print("保存模型字典时的验证acc是" + str(val_accuracy))
                     best_model_params = target_model.state_dict().copy()
-                    early_stopping_counter = 0  # 重置早停计数器
+                    early_stopping_counter = 0   
                 else:
                     early_stopping_counter += 1
 
-        # 检查是否需要早
         if early_stopping_counter >= patience:
             print(f'Early stopping at epoch {epoch + 1}')
             break
-        # 加载性能最好的模型参数
     if best_model_params is not None:
         target_model.load_state_dict(best_model_params)
         torch.save(best_model_params,
@@ -169,3 +158,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+

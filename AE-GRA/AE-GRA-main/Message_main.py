@@ -25,14 +25,14 @@ def test(adj, features, labels, victim_model):
 
     loss_test = F.nll_loss(output[idx_test], labels[idx_test])
     acc_test = accuracy(output[idx_test], labels[idx_test])
-    print("Test set results:", "loss= {:.4f}".format(loss_test.item()), "gcn测试节点预测accuracy= {:.4f}".format(acc_test.item()))
+    print("Test set results:", "loss= {:.4f}".format(loss_test.item()), "gcn accuracy= {:.4f}".format(acc_test.item()))
 
     return output.detach()
 
 def dot_product_decode(Z):
-    Z = F.normalize(Z, p=2, dim=1)#Z 的每一行归一化到单位范数（即每行的L2范数为1）
-    Z = torch.matmul(Z, Z.t())#计算了 Z 和 Z 的转置 Z.t() 的点积（矩阵乘法）。结果的元素表示原始 Z 矩阵中每对节点之间的相似度。
-    adj = torch.relu(Z-torch.eye(Z.shape[0]))#减去单位矩阵，只保留非对角线上的值，ReLU激活函数确保输出的值是非负的，保留非负的相似度值，并将负值设为0
+    Z = F.normalize(Z, p=2, dim=1)
+    Z = torch.matmul(Z, Z.t())
+    adj = torch.relu(Z-torch.eye(Z.shape[0]))
     return adj
 
 def preprocess_Adj(adj, feature_adj):
@@ -73,11 +73,11 @@ def metric_all(ori_adj, inference_adj, idx):
     real_edge = ori_adj[idx, :][:, idx].reshape(-1)
     pred_edge = inference_adj[idx, :][:, idx].reshape(-1)
     bin_pred_edge = (pred_edge >= 0.5).astype(int)
-    TP = np.sum((real_edge == 1) & (bin_pred_edge == 1))  # 预测对了的边
-    FP = np.sum((real_edge == 0) & (bin_pred_edge == 1))  # 错把无边预测为有边
-    FN = np.sum((real_edge == 1) & (bin_pred_edge == 0))  # 把真实的边漏掉了
+    TP = np.sum((real_edge == 1) & (bin_pred_edge == 1))  
+    FP = np.sum((real_edge == 0) & (bin_pred_edge == 1))  
+    FN = np.sum((real_edge == 1) & (bin_pred_edge == 0))  
     print("TP: %f, FP: %f, FN: %f" % (TP,FP,FN))
-    precision = TP / (TP + FP + 1e-10)  # 避免除 0
+    precision = TP / (TP + FP + 1e-10)  
     recall = TP / (TP + FN + 1e-10)
     print(f"Precision: {precision:.6f}  Recall: {recall:.6f}")
 
@@ -136,8 +136,8 @@ def pubmed_create_edge_index_from_features2(features, threshold=0.5, block_size=
         end = min(start + block_size, num_nodes)
 
         sim_block = torch.mm(features[start:end], features.T)  # [block_size, num_nodes]
-        rows, cols = torch.where(sim_block >= threshold)  # 筛选出满足阈值的索引
-        rows += start  # 调整行索引
+        rows, cols = torch.where(sim_block >= threshold) 
+        rows += start  
         edge_list.append(torch.stack([rows, cols], dim=0))
 
         print(f"处理块 {start}-{end} 完成，边数：{rows.size(0)}")
@@ -150,18 +150,16 @@ def pubmed_create_edge_index_from_features(features, threshold=0.5):
     sim_matrix_sparse = csr_matrix(sim_matrix)
     sim_matrix_sparse = sim_matrix_sparse.multiply(sim_matrix_sparse >= threshold)
     sim_matrix_sparse.eliminate_zeros()
-    rows, cols = sim_matrix_sparse.nonzero()  # 提取行和列索引
-    edge_index = np.vstack((rows, cols))  # 合并为一个二维 NumPy 数组
-    return torch.from_numpy(edge_index).to(features.device)  # 转为 PyTorch 张量并与 features 保持一致设备
+    rows, cols = sim_matrix_sparse.nonzero()  
+    edge_index = np.vstack((rows, cols))  
+    return torch.from_numpy(edge_index).to(features.device) 
 
 
 
 
 def cosine_similarity_matrix(features):
     normalized_features = F.normalize(features, p=2, dim=1)
-    print("获得归一化矩阵")
     similarity_matrix = torch.mm(normalized_features, normalized_features.t())
-    print("获得相似度矩阵")
     return similarity_matrix
 
 
@@ -172,7 +170,7 @@ def find_neighbors_threshold(model, features, adj_norm, node_idx, N,epsilon=0.1,
     perturbed_features[node_idx] += torch.randn_like(perturbed_features[node_idx]) * epsilon
     p1 = model(features, adj_norm)
     p2 = model(perturbed_features, adj_norm)
-    delta_p = (p2 - p1).abs().sum(dim=1)#其他节点类别预测变化总量
+    delta_p = (p2 - p1).abs().sum(dim=1)
     # print(f"delta_p for node {node_idx}: {delta_p}")
     affected_nodes = torch.where(delta_p > threshold)[0]
     return affected_nodes
@@ -190,30 +188,28 @@ def find_delta_p_matrix(model, features, adj_norm, epsilon=0.1):
 
         p2 = model(perturbed_features, adj_norm)
         delta_p = (p2 - p1).abs().sum(dim=1)
-        delta_p[node_idx] = 0  # 不考虑自己
+        delta_p[node_idx] = 0 
         delta_p_matrix[node_idx] = delta_p
     torch.cuda.empty_cache()
-    print("预测差值矩阵为")
     print(delta_p_matrix)
     return delta_p_matrix
 
 def build_topk_adj_from_asymmetric_delta(delta_p_matrix, density=0.0015):
     N = delta_p_matrix.shape[0]
     K = int(density * N * (N - 1) / 2)
-    print("K值为")
     print(K)
     delta_p_matrix = delta_p_matrix.clone()
     delta_p_matrix.fill_diagonal_(-1)
     torch.cuda.empty_cache()
     flat = delta_p_matrix.flatten()
-    topk = torch.topk(flat, k=min(K, flat.numel()))#为了避免 K 大于【flat.numel()=flat 张量中元素的数量=N^2 】的总元素数而导致报错。
+    topk = torch.topk(flat, k=min(K, flat.numel()))
     topk_indices = topk.indices
     rows = topk_indices // N
     cols = topk_indices % N
     adj_reconstructed = torch.zeros((N, N), device=delta_p_matrix.device)
     for i, j in zip(rows, cols):
         adj_reconstructed[i, j] = 1
-        adj_reconstructed[j, i] = 1  # 如果你希望是无向图（可选）
+        adj_reconstructed[j, i] = 1  
 
     return adj_reconstructed
 
@@ -258,8 +254,7 @@ def reconstruct_graph_by_gradient_diff_K(model, features, adj_norm, density=0.00
 
     adj_reconstructed = torch.zeros((N, N), device=features.device)
     adj_reconstructed[rows, cols] = 1
-    adj_reconstructed[cols, rows] = 1  # 对称
-
+    adj_reconstructed[cols, rows] = 1 
     return adj_reconstructed
 
 
@@ -320,7 +315,7 @@ def main():
     model.embeddingattackGCN(adj, features, init_adj, labels, idx_train, num_edges, epochs=args.epochs)
     adj_reconstructed = model.modified_adj.cpu()
     print('attack cora calculating edge inference AUC&AP ===')
-    for i in range(5):  # 评估 5 次
+    for i in range(5):  
         idx_random = np.array(random.sample(range(adj.shape[0]), int(adj.shape[0] * args.nlabel)))
         print(f"\n=== Evaluation Round {i + 1} ===")
         metric(adj.numpy(), adj_reconstructed.numpy(), idx_random)
@@ -328,3 +323,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+

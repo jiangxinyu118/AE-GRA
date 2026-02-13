@@ -18,14 +18,14 @@ def test(adj, features, labels, victim_model):
 
     loss_test = F.nll_loss(output[idx_test], labels[idx_test])
     acc_test = accuracy(output[idx_test], labels[idx_test])
-    print("Test set results:", "loss= {:.4f}".format(loss_test.item()), "gcn测试节点预测accuracy= {:.4f}".format(acc_test.item()))
+    print("Test set results:", "loss= {:.4f}".format(loss_test.item()), "gcn accuracy= {:.4f}".format(acc_test.item()))
 
     return output.detach()
 
 def dot_product_decode(Z):
-    Z = F.normalize(Z, p=2, dim=1)#Z 的每一行归一化到单位范数（即每行的L2范数为1）
-    Z = torch.matmul(Z, Z.t())#计算了 Z 和 Z 的转置 Z.t() 的点积（矩阵乘法）。结果的元素表示原始 Z 矩阵中每对节点之间的相似度。
-    adj = torch.relu(Z-torch.eye(Z.shape[0]))#减去单位矩阵，只保留非对角线上的值，ReLU激活函数确保输出的值是非负的，保留非负的相似度值，并将负值设为0
+    Z = F.normalize(Z, p=2, dim=1) 
+    Z = torch.matmul(Z, Z.t()) 
+    adj = torch.relu(Z-torch.eye(Z.shape[0])) 
     return adj
 
 def preprocess_Adj(adj, feature_adj):
@@ -98,7 +98,6 @@ parser.add_argument('--nlabel', type=float, default=0.1)
 args = parser.parse_args() 
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-print("-----------正在用"+str(device)+"训练-----------")
 np.random.seed(args.seed)
 torch.manual_seed(args.seed)
 if device != 'cpu':
@@ -111,10 +110,10 @@ adj, features, labels, init_adj = data.adj, data.features, data.labels, data.ini
 idx_train, idx_val, idx_test= data.idx_train, data.idx_val, data.idx_test
 adj, features, labels = preprocess(adj, features, labels, preprocess_adj=False, onehot_feature=False)
 
-feature_adj = dot_product_decode(features)#获得归一化相似度矩阵
+feature_adj = dot_product_decode(features) 
 
 
-init_adj = torch.FloatTensor(init_adj.todense())#大小是节点数X节点数；将稀疏矩阵转换为密集矩阵，将密集矩阵转换为 PyTorch 张量
+init_adj = torch.FloatTensor(init_adj.todense()) 
 
 # Setup Victim Model
 victim_model = GCN(nfeat=features.shape[1], nclass=labels.max().item() + 1, nhid=128,
@@ -126,6 +125,7 @@ victim_model.fit(features, adj, labels, idx_train, idx_val)
 best_model_params = torch.load(' ')
 victim_model.load_state_dict(best_model_params)
 test(adj, features, labels, victim_model)
+
 
 
 
